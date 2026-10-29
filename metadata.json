@@ -1,0 +1,6 @@
+{
+  "name": "AI Đồng Hành – Kiến Tạo Lớp 4 Hạnh Phúc",
+  "description": "Nền tảng trợ lý số thông minh hỗ trợ giáo viên chủ nhiệm lớp 4A4 Trường Tiểu học Khoái Châu 1 thấu hiểu học sinh, cá nhân hóa giáo dục và kiến tạo lớp học hạnh phúc.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
