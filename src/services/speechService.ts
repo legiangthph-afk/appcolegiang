@@ -328,6 +328,7 @@ class SpeechService {
 
   /**
    * Play using Server-side High-Fidelity Vietnamese TTS Proxy
+   * Never falls back to English voices!
    */
   private async playViaServerTTS(
     text: string,
@@ -352,32 +353,72 @@ class SpeechService {
       const chunk = chunks[chunkIndex];
       chunkIndex++;
 
-      const url = `/api/tts?text=${encodeURIComponent(chunk)}`;
-      const audio = new Audio(url);
+      // Attempt 1: Fetch through /api/tts endpoint
+      let audioBlobUrl: string | null = null;
+      try {
+        const response = await fetch(`/api/tts?text=${encodeURIComponent(chunk)}`, {
+          signal,
+          headers: { Accept: 'audio/mpeg, audio/*' },
+        });
+
+        if (response.ok) {
+          const contentType = response.headers.get('content-type') || '';
+          if (contentType.includes('audio') || contentType.includes('mpeg')) {
+            const blob = await response.blob();
+            audioBlobUrl = URL.createObjectURL(blob);
+          }
+        }
+      } catch (e: any) {
+        if (signal.aborted) return;
+        console.warn('/api/tts fetch failed, trying direct Vietnamese TTS stream:', e);
+      }
+
+      // If /api/tts could not be reached, use direct Vietnamese stream URL
+      const finalAudioUrl =
+        audioBlobUrl ||
+        `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(
+          chunk.slice(0, 190)
+        )}&tl=vi&client=tw-ob`;
+
+      const audio = new Audio(finalAudioUrl);
       this.currentAudio = audio;
       audio.playbackRate = this.settings.rate || 0.9;
-      audio.volume = Math.max(0, Math.min(1, this.settings.volume || 1.0));
+      audio.volume = Math.max(0, Math.min(1, this.settings.volume ?? 1.0));
+
+      const cleanupCurrentAudio = () => {
+        if (audioBlobUrl) {
+          try {
+            URL.revokeObjectURL(audioBlobUrl);
+          } catch {}
+        }
+      };
 
       audio.onended = () => {
+        cleanupCurrentAudio();
         playNextChunk();
       };
 
       audio.onerror = () => {
+        cleanupCurrentAudio();
         if (signal.aborted) return;
         console.error('Server TTS audio chunk error for chunk:', chunk);
-        // Try device speech as last-resort fallback IF device has Vietnamese voice
+
+        // Try device speech as last-resort fallback IF AND ONLY IF device has Vietnamese voice
         const viVoices = this.getVietnameseVoices();
         if (viVoices.length > 0) {
           this.playViaDeviceWebSpeech(chunks.slice(chunkIndex - 1).join(' '), viVoices, signal, callbacks);
         } else {
           this.stop();
-          callbacks?.onError?.('Không thể tải giọng đọc tiếng Việt qua máy chủ. Vui lòng kiểm tra kết nối mạng.');
+          callbacks?.onError?.(
+            'Thiết bị hiện chưa có giọng đọc tiếng Việt. Vui lòng bật dịch vụ giọng Việt trong phần Cài đặt.'
+          );
         }
       };
 
       try {
         await audio.play();
       } catch (err: any) {
+        cleanupCurrentAudio();
         if (signal.aborted) return;
         console.warn('Audio play autoplay policy blocked or interrupted:', err);
         this.stop();

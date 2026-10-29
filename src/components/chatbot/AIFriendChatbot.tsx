@@ -36,7 +36,7 @@ export const AIFriendChatbot: React.FC = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(() => speechService.getSettings().autoReadChatbot ?? true);
+  const [soundEnabled, setSoundEnabled] = useState(() => speechService.getSettings().autoReadChatbot ?? false);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
 
   // Sync role with session when changed
@@ -57,7 +57,7 @@ export const AIFriendChatbot: React.FC = () => {
   }, []);
 
   const ROBOT_WELCOME_TEXT =
-    'Xin chào bạn! Mình là bạn AI Hạnh Phúc. Mình rất vui được đồng hành cùng bạn trong lớp bốn A bốn. Hôm nay bạn muốn học tập, chơi trò chơi hay chia sẻ một điều thú vị nào không?';
+    'Xin chào bạn! Mình là AI Hạnh Phúc. Hôm nay bạn muốn học điều gì mới hay cùng mình chơi một trò chơi thật vui nào?';
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {

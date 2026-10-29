@@ -122,10 +122,17 @@ export const InteractiveGames: React.FC = () => {
   const [obsStep, setObsStep] = useState(1);
   const [obsAnswer, setObsAnswer] = useState<number | null>(null);
 
+  const GAME_SOUND_PROMPTS = {
+    start: 'Chào mừng bạn đến với trò chơi. Bạn đã sẵn sàng chưa nào?',
+    correct: 'Chính xác! Chúc mừng bạn!',
+    wrong: 'Chưa đúng rồi! Bạn hãy suy nghĩ và thử lại nhé!',
+    finish: 'Tuyệt vời! Bạn đã hoàn thành trò chơi. Hãy tiếp tục cố gắng nhé!',
+  };
+
   // Play game welcome greeting when starting or switching games
   useEffect(() => {
     if (soundEnabled) {
-      speechService.speak('Chào mừng bạn đến với trò chơi học tập! Bạn đã sẵn sàng chưa nào?');
+      speechService.speak(GAME_SOUND_PROMPTS.start);
     }
   }, [activeGame]);
 
@@ -134,7 +141,7 @@ export const InteractiveGames: React.FC = () => {
     speechService.speak(text);
   };
 
-  const triggerReward = (stars = 2, cheerText = 'Chính xác! Bạn thật tuyệt vời!') => {
+  const triggerReward = (stars = 2, cheerText = GAME_SOUND_PROMPTS.correct) => {
     confetti({
       particleCount: 70,
       spread: 60,
@@ -158,7 +165,7 @@ export const InteractiveGames: React.FC = () => {
 
     const isCorrect = idx === DEFAULT_QUESTIONS[milIndex].correct;
     if (isCorrect) {
-      triggerReward(3, 'Chính xác! Bạn thật tuyệt vời!');
+      triggerReward(3, GAME_SOUND_PROMPTS.correct);
       setTimeout(() => {
         if (milIndex + 1 < DEFAULT_QUESTIONS.length) {
           setMilIndex((prev) => prev + 1);
@@ -166,12 +173,12 @@ export const InteractiveGames: React.FC = () => {
           setMilAnswered(false);
         } else {
           setMilGameOver(true);
-          triggerReward(10, 'Chúc mừng bạn đã hoàn thành trò chơi! Hãy tiếp tục cố gắng nhé!');
+          triggerReward(10, GAME_SOUND_PROMPTS.finish);
         }
       }, 1500);
     } else {
       if (soundEnabled) {
-        speechService.speak('Chưa chính xác rồi! Bạn hãy thử lại nhé!');
+        speechService.speak(GAME_SOUND_PROMPTS.wrong);
       }
     }
   };
@@ -589,10 +596,10 @@ export const InteractiveGames: React.FC = () => {
                     const clean = crosswordAnswer.trim().toLowerCase().replace(/\s+/g, '');
                     if (clean === 'hanhphuc' || clean === 'hạnhphúc') {
                       setCrosswordSuccess(true);
-                      triggerReward(5, 'Chính xác! Bạn thật tuyệt vời!');
+                      triggerReward(5, GAME_SOUND_PROMPTS.correct);
                     } else {
                       if (soundEnabled) {
-                        speechService.speak('Chưa chính xác rồi! Bạn hãy thử lại nhé!');
+                        speechService.speak(GAME_SOUND_PROMPTS.wrong);
                       }
                     }
                   }}
@@ -636,11 +643,11 @@ export const InteractiveGames: React.FC = () => {
                   onClick={() => {
                     const correct = tfQuestions[tfIndex].answer === true;
                     if (correct) {
-                      triggerReward(2, 'Chính xác! Bạn thật tuyệt vời!');
+                      triggerReward(2, GAME_SOUND_PROMPTS.correct);
                       setTfFeedback(tfQuestions[tfIndex].note);
                     } else {
                       if (soundEnabled) {
-                        speechService.speak('Chưa chính xác rồi! Bạn hãy thử lại nhé!');
+                        speechService.speak(GAME_SOUND_PROMPTS.wrong);
                       }
                       setTfFeedback(tfQuestions[tfIndex].note);
                     }
@@ -654,11 +661,11 @@ export const InteractiveGames: React.FC = () => {
                   onClick={() => {
                     const correct = tfQuestions[tfIndex].answer === false;
                     if (correct) {
-                      triggerReward(2, 'Chính xác! Bạn thật tuyệt vời!');
+                      triggerReward(2, GAME_SOUND_PROMPTS.correct);
                       setTfFeedback(tfQuestions[tfIndex].note);
                     } else {
                       if (soundEnabled) {
-                        speechService.speak('Chưa chính xác rồi! Bạn hãy thử lại nhé!');
+                        speechService.speak(GAME_SOUND_PROMPTS.wrong);
                       }
                       setTfFeedback(tfQuestions[tfIndex].note);
                     }

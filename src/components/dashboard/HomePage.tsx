@@ -52,9 +52,9 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onOpenSettings }
   };
 
   const WELCOME_SPEECH_TEXT = `Xin chào cô giáo Lê Thị Giang và các em học sinh thân yêu của lớp bốn A bốn!
-Chào mừng đến với ứng dụng AI Đồng Hành – Kiến Tạo Lớp Bốn Hạnh Phúc!
-Cô và các em hãy cùng khám phá những hoạt động học tập thú vị, chia sẻ yêu thương và cùng nhau tiến bộ mỗi ngày nhé!
-Chúc cô và các em có một ngày học tập thật vui vẻ và hạnh phúc!`;
+Chào mừng cô và các em đến với ứng dụng AI Đồng Hành – Kiến Tạo Lớp Bốn Hạnh Phúc!
+Mình là bạn AI Hạnh Phúc, rất vui được đồng hành cùng cô và các bạn trong những hoạt động học tập thú vị.
+Chúc cô và các em luôn vui vẻ, tự tin, chăm ngoan và có thật nhiều niềm vui mỗi ngày!`;
 
   const [isSpeakingWelcome, setIsSpeakingWelcome] = useState(false);
 

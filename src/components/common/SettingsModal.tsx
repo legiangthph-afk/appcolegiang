@@ -13,7 +13,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   const [formData, setFormData] = useState({ ...teacherProfile });
   const [speechSettings, setSpeechSettings] = useState(() => speechService.getSettings());
+  const [speechState, setSpeechState] = useState(() => speechService.getState());
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [testSpeechError, setTestSpeechError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    const unsub = speechService.subscribe((s) => setSpeechState(s));
+    return () => unsub();
+  }, []);
 
   if (!isOpen) return null;
 
@@ -29,9 +36,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   };
 
   const handleTestSpeech = () => {
+    setTestSpeechError(null);
     speechService.saveSettings(speechSettings);
     speechService.speak(
-      'Xin chào! Đây là giọng đọc tiếng Việt của ứng dụng AI Đồng Hành – Kiến Tạo Lớp Bốn Hạnh Phúc.'
+      'Xin chào! Tôi là trợ lý AI của lớp bốn A bốn. Chúc cô giáo Lê Thị Giang và các em học sinh một ngày học tập thật vui và hạnh phúc!',
+      {
+        onError: (err) => setTestSpeechError(err),
+      }
     );
   };
 
@@ -341,22 +352,70 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               </label>
             </div>
 
+            {/* Live Audio Metadata Card */}
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-medium">Nguồn phát đang dùng:</span>
+                <span className="font-bold text-sky-700">
+                  {speechSettings.ttsSource === 'auto'
+                    ? 'Tự động lựa chọn (Ưu tiên giọng chuẩn)'
+                    : speechSettings.ttsSource === 'server'
+                    ? 'Máy chủ (Google Cloud Neural2 / Translate TTS)'
+                    : 'Thiết bị (Web Speech API)'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-medium">Tên giọng & phong cách:</span>
+                <span className="font-bold text-slate-700">
+                  {speechSettings.selectedVoiceURI
+                    ? speechState.availableVoices.find((v) => v.voiceURI === speechSettings.selectedVoiceURI)?.name ||
+                      'Giọng tiếng Việt đã chọn'
+                    : 'Giọng Nữ Tiếng Việt (Phong cách Cô giáo ấm áp)'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-medium">Mã ngôn ngữ chuẩn:</span>
+                <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                  vi-VN (Vietnamese)
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500 font-medium">Trạng thái kết nối:</span>
+                <span className="font-bold text-emerald-600 flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Sẵn sàng phát âm
+                </span>
+              </div>
+              {testSpeechError && (
+                <div className="mt-2 p-2 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs">
+                  ⚠️ {testSpeechError}
+                </div>
+              )}
+            </div>
+
             {/* Test Voice & Stop Buttons */}
-            <div className="pt-2 flex flex-wrap items-center gap-3">
+            <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <button
                 type="button"
                 onClick={handleTestSpeech}
-                className="px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-amber-950 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2"
+                className={`flex-1 py-3 px-5 font-black text-sm rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                  speechState.isSpeaking
+                    ? 'bg-amber-500 text-white animate-pulse ring-2 ring-amber-300'
+                    : 'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-700 text-amber-950 shadow-amber-300/40'
+                }`}
               >
-                <Volume2 className="w-4 h-4" /> THỬ GIỌNG TIẾNG VIỆT
+                <Volume2 className={`w-5 h-5 ${speechState.isSpeaking ? 'animate-bounce' : ''}`} />
+                {speechState.isSpeaking ? 'ĐANG THỬ GIỌNG (BẤM ĐỂ DỪNG)' : '🔊 THỬ GIỌNG ĐỌC TIẾNG VIỆT'}
               </button>
 
               <button
                 type="button"
-                onClick={() => speechService.stop()}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-all"
+                onClick={() => {
+                  speechService.stop();
+                  setTestSpeechError(null);
+                }}
+                className="py-3 px-5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-2xl border border-slate-200 transition-all cursor-pointer flex items-center justify-center gap-1.5"
               >
-                DỪNG ĐỌC
+                DỪNG ÂM THANH
               </button>
             </div>
           </div>

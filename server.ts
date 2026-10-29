@@ -45,11 +45,56 @@ const handleVietnameseTTS = async (text: string, res: Response) => {
     return res.status(400).json({ error: 'Nội dung âm thanh trống.' });
   }
 
-  // Google Translate TTS chunk limit ~200 characters
-  const cleanChunk = text.trim().slice(0, 200);
-  const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanChunk)}&tl=vi&client=tw-ob`;
+  const cleanChunk = text.trim().slice(0, 300);
 
+  // Strategy 1: Google Cloud Text-to-Speech API (Neural2 / Wavenet female Vietnamese voice)
+  const gcpTtsKey = process.env.GOOGLE_CLOUD_TTS_API_KEY || process.env.GEMINI_API_KEY;
+  if (gcpTtsKey) {
+    try {
+      const gcpUrl = `https://texttospeech.googleapis.com/v1/text:synthesize?key=${gcpTtsKey}`;
+      const gcpRes = await fetch(gcpUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          input: { text: cleanChunk },
+          voice: {
+            languageCode: 'vi-VN',
+            name: 'vi-VN-Neural2-A',
+            ssmlGender: 'FEMALE',
+          },
+          audioConfig: {
+            audioEncoding: 'MP3',
+            speakingRate: 0.92,
+            pitch: 0.0,
+          },
+        }),
+      });
+
+      if (gcpRes.ok) {
+        const data: any = await gcpRes.json();
+        if (data.audioContent) {
+          const audioBuffer = Buffer.from(data.audioContent, 'base64');
+          res.set({
+            'Content-Type': 'audio/mpeg',
+            'Content-Length': audioBuffer.length.toString(),
+            'Cache-Control': 'public, max-age=86400',
+            'Accept-Ranges': 'bytes',
+            'X-TTS-Source': 'Google-Cloud-Neural2-Female',
+          });
+          return res.send(audioBuffer);
+        }
+      }
+    } catch (gcpErr) {
+      console.warn('GCP TTS fallback to Google Translate TTS:', gcpErr);
+    }
+  }
+
+  // Strategy 2: Google Translate Vietnamese TTS Fallback (Zero auth required, female Vietnamese voice)
   try {
+    const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(
+      cleanChunk.slice(0, 190)
+    )}&tl=vi&client=tw-ob`;
+
     const response = await fetch(ttsUrl, {
       headers: {
         'User-Agent':
@@ -69,6 +114,7 @@ const handleVietnameseTTS = async (text: string, res: Response) => {
       'Content-Length': buffer.length.toString(),
       'Cache-Control': 'public, max-age=86400',
       'Accept-Ranges': 'bytes',
+      'X-TTS-Source': 'Google-Translate-Vietnamese',
     });
 
     return res.send(buffer);
