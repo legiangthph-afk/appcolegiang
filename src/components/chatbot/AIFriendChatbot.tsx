@@ -36,7 +36,8 @@ export const AIFriendChatbot: React.FC = () => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(() => speechService.getSettings().autoReadChatbot ?? true);
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
 
   // Sync role with session when changed
   useEffect(() => {
@@ -45,11 +46,24 @@ export const AIFriendChatbot: React.FC = () => {
     else setActiveRole('teacher');
   }, [currentSession.role]);
 
+  // Subscribe to speech service state
+  useEffect(() => {
+    const unsubscribe = speechService.subscribe((state) => {
+      if (!state.isSpeaking) {
+        setSpeakingMsgId(null);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const ROBOT_WELCOME_TEXT =
+    'Xin chào bạn! Mình là bạn AI Hạnh Phúc. Mình rất vui được đồng hành cùng bạn trong lớp bốn A bốn. Hôm nay bạn muốn học tập, chơi trò chơi hay chia sẻ một điều thú vị nào không?';
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'welcome',
       sender: 'ai',
-      text: 'Xin chào! Mình là Bạn AI Hạnh Phúc 🤖🌸 – người bạn đồng hành thông minh của lớp 4A4 Trường Tiểu học Khoái Châu 1. Hôm nay mình có thể hỗ trợ gì cho bạn?',
+      text: ROBOT_WELCOME_TEXT,
       timestamp: 'Bây giờ',
     },
   ]);
@@ -143,7 +157,11 @@ export const AIFriendChatbot: React.FC = () => {
 
       // Speak AI reply if sound enabled
       if (soundEnabled) {
-        speechService.speak(reply);
+        speechService.speak(reply, {
+          onStart: () => setSpeakingMsgId(aiMsg.id),
+          onEnd: () => setSpeakingMsgId(null),
+          onError: () => setSpeakingMsgId(null),
+        });
       }
     } catch (e: any) {
       setMessages((prev) => [
@@ -186,9 +204,20 @@ export const AIFriendChatbot: React.FC = () => {
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => {
-            setIsOpen(!isOpen);
-            if (!isOpen) {
+            const nextOpen = !isOpen;
+            setIsOpen(nextOpen);
+            if (nextOpen) {
               speechService.playGentleDing();
+              if (soundEnabled) {
+                speechService.speak(ROBOT_WELCOME_TEXT, {
+                  onStart: () => setSpeakingMsgId('welcome'),
+                  onEnd: () => setSpeakingMsgId(null),
+                  onError: () => setSpeakingMsgId(null),
+                });
+              }
+            } else {
+              speechService.stop();
+              setSpeakingMsgId(null);
             }
           }}
           className="relative group p-3.5 bg-gradient-to-r from-sky-500 via-sky-600 to-indigo-600 text-white rounded-full shadow-2xl flex items-center justify-center border-2 border-white/60 hover:shadow-sky-400/50"
@@ -316,13 +345,34 @@ export const AIFriendChatbot: React.FC = () => {
                   >
                     <p className="whitespace-pre-wrap">{msg.text}</p>
                     {msg.sender === 'ai' && (
-                      <button
-                        onClick={() => speechService.speak(msg.text)}
-                        className="mt-2 text-sky-600 hover:text-sky-700 flex items-center gap-1 text-[11px] font-bold"
-                        title="Đọc lại câu trả lời"
-                      >
-                        <Volume2 className="w-3.5 h-3.5" /> Nghe đọc
-                      </button>
+                      <div className="mt-2 flex items-center gap-2">
+                        {speakingMsgId === msg.id ? (
+                          <button
+                            onClick={() => {
+                              speechService.stop();
+                              setSpeakingMsgId(null);
+                            }}
+                            className="text-rose-600 hover:text-rose-700 flex items-center gap-1.5 text-[11px] font-bold bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-200 transition-all"
+                            title="Dừng đọc"
+                          >
+                            <Volume2 className="w-3.5 h-3.5 animate-bounce text-rose-600" /> Dừng đọc
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              speechService.speak(msg.text, {
+                                onStart: () => setSpeakingMsgId(msg.id),
+                                onEnd: () => setSpeakingMsgId(null),
+                                onError: () => setSpeakingMsgId(null),
+                              });
+                            }}
+                            className="text-sky-600 hover:text-sky-700 flex items-center gap-1 text-[11px] font-bold hover:underline"
+                            title="Nghe đọc câu trả lời bằng tiếng Việt"
+                          >
+                            <Volume2 className="w-3.5 h-3.5" /> Nghe đọc tiếng Việt
+                          </button>
+                        )}
+                      </div>
                     )}
                   </div>
                   <span className="text-[10px] text-slate-400 mt-1 px-1">{msg.timestamp}</span>

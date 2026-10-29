@@ -67,7 +67,7 @@ export const AICreativeCenter: React.FC = () => {
     speechService.playGentleDing();
 
     const prompt = `Tạo danh sách ${quantity} mục nội dung mới không trùng lặp cho: ${task.label} lớp 4.
-Giáo viên: Lê Thị Giang, Lớp 4A4, Trường Tiểu học Khoái Châu 1, Hưng Yên.
+Giáo viên: Lê Thị Giang, Lớp 4A4, Trường Tiểu học Khoái Châu 1, Xã Khoái Châu, Tỉnh Hưng Yên.
 Yêu cầu: Viết súc tích, văn phong sư phạm ấm áp, chuẩn GDPT 2018.`;
 
     try {

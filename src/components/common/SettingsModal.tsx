@@ -30,7 +30,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   const handleTestSpeech = () => {
     speechService.saveSettings(speechSettings);
-    speechService.speak('Xin chào cô giáo Lê Thị Giang và các bạn học sinh lớp 4A4!');
+    speechService.speak(
+      'Xin chào! Đây là giọng đọc tiếng Việt của ứng dụng AI Đồng Hành – Kiến Tạo Lớp Bốn Hạnh Phúc.'
+    );
   };
 
   return (
@@ -93,7 +95,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">Địa phương / Huyện, Tỉnh</label>
+                <label className="block text-xs font-semibold text-slate-600 mb-1">Địa phương / Xã, Tỉnh</label>
                 <input
                   type="text"
                   value={formData.province}
@@ -172,39 +174,190 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             </div>
           </div>
 
-          {/* Sound & Speech Settings */}
-          <div className="pt-4 border-t border-slate-200">
-            <h3 className="text-sm font-bold text-sky-800 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Volume2 className="w-4 h-4" /> Cài đặt Giọng đọc tiếng Việt (TTS)
-            </h3>
+          {/* Sound & Vietnamese Speech Settings */}
+          <div className="pt-4 border-t border-slate-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-sky-800 uppercase tracking-wider flex items-center gap-2">
+                <Volume2 className="w-4 h-4 text-amber-500" /> 🔊 Cài Đặt Giọng Đọc Tiếng Việt
+              </h3>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={speechSettings.enabled}
+                  onChange={(e) => setSpeechSettings({ ...speechSettings, enabled: e.target.checked })}
+                  className="rounded text-sky-600 focus:ring-sky-500 w-4 h-4"
+                />
+                <span className="text-xs font-semibold text-slate-700">Bật âm thanh ứng dụng</span>
+              </label>
+            </div>
 
+            {/* TTS Status & Voice Source */}
+            <div className="p-3 rounded-2xl bg-sky-50 border border-sky-200 text-xs space-y-2">
+              <div className="flex items-start gap-2">
+                <span className="text-base">{speechService.hasVietnameseVoice() ? '🟢' : '🟡'}</span>
+                <div>
+                  <div className="font-bold text-slate-800">
+                    {speechService.hasVietnameseVoice()
+                      ? `Đã nhận diện ${speechService.getVietnameseVoices().length} giọng tiếng Việt trên thiết bị`
+                      : 'Chưa phát hiện giọng tiếng Việt cài trên máy'}
+                  </div>
+                  <div className="text-[11px] text-slate-600 mt-0.5">
+                    {speechService.hasVietnameseVoice()
+                      ? 'Thiết bị hỗ trợ phát âm trực tiếp chuẩn tiếng Việt qua Web Speech API.'
+                      : 'Hệ thống tự động sử dụng dịch vụ TTS AI máy chủ để phát âm tiếng Việt 100% chuẩn xác, tuyệt đối không dùng giọng tiếng Anh đọc tiếng Việt.'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* TTS Source Selector */}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold text-slate-700">Nguồn phát âm thanh tiếng Việt</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {[
+                  {
+                    id: 'auto',
+                    title: 'Tự động lựa chọn',
+                    desc: 'Ưu tiên máy, tự chuyển AI khi thiếu giọng',
+                  },
+                  {
+                    id: 'device',
+                    title: 'Giọng trên thiết bị',
+                    desc: 'Dùng Web Speech API của trình duyệt',
+                  },
+                  {
+                    id: 'server',
+                    title: 'Dịch vụ TTS AI',
+                    desc: 'Giọng đọc chuẩn tiếng Việt từ máy chủ',
+                  },
+                ].map((src) => (
+                  <button
+                    key={src.id}
+                    type="button"
+                    onClick={() =>
+                      setSpeechSettings({
+                        ...speechSettings,
+                        ttsSource: src.id as 'auto' | 'device' | 'server',
+                      })
+                    }
+                    className={`p-2.5 rounded-xl text-left border transition-all ${
+                      speechSettings.ttsSource === src.id
+                        ? 'border-sky-500 bg-sky-50 text-sky-900 font-bold shadow-xs'
+                        : 'border-slate-200 hover:bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    <div className="text-xs">{src.title}</div>
+                    <div className="text-[10px] text-slate-500 mt-0.5">{src.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Device Voice Selection if Available */}
+            {speechService.hasVietnameseVoice() && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Chọn giọng đọc tiếng Việt trên thiết bị
+                </label>
+                <select
+                  value={speechSettings.selectedVoiceURI}
+                  onChange={(e) =>
+                    setSpeechSettings({ ...speechSettings, selectedVoiceURI: e.target.value })
+                  }
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:ring-2 focus:ring-sky-500"
+                >
+                  <option value="">-- Mặc định (Tự chọn giọng nữ / giọng tối ưu) --</option>
+                  {speechService.getVietnameseVoices().map((v) => (
+                    <option key={v.voiceURI} value={v.voiceURI}>
+                      {v.name} ({v.lang})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Rate & Volume Sliders */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-600 mb-1">
-                  Tốc độ đọc ({speechSettings.rate}x)
-                </label>
+                <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1">
+                  <span>Tốc độ đọc</span>
+                  <span className="text-sky-600 font-bold">{speechSettings.rate}x (Chuẩn: 0.9x)</span>
+                </div>
                 <input
                   type="range"
-                  min="0.75"
+                  min="0.7"
                   max="1.3"
                   step="0.05"
                   value={speechSettings.rate}
                   onChange={(e) =>
                     setSpeechSettings({ ...speechSettings, rate: parseFloat(e.target.value) })
                   }
-                  className="w-full accent-sky-600"
+                  className="w-full accent-sky-600 cursor-pointer"
                 />
+                <div className="flex justify-between text-[10px] text-slate-400">
+                  <span>Chậm (0.7x)</span>
+                  <span>Vừa phải (0.9x)</span>
+                  <span>Nhanh (1.3x)</span>
+                </div>
               </div>
 
-              <div className="flex items-center">
-                <button
-                  type="button"
-                  onClick={handleTestSpeech}
-                  className="px-4 py-2 bg-sky-50 text-sky-700 font-bold text-xs rounded-xl border border-sky-200 hover:bg-sky-100 transition-all flex items-center gap-2"
-                >
-                  <Volume2 className="w-4 h-4" /> Thử giọng đọc tiếng Việt
-                </button>
+              <div>
+                <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1">
+                  <span>Âm lượng</span>
+                  <span className="text-sky-600 font-bold">{Math.round(speechSettings.volume * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="1.0"
+                  step="0.05"
+                  value={speechSettings.volume}
+                  onChange={(e) =>
+                    setSpeechSettings({ ...speechSettings, volume: parseFloat(e.target.value) })
+                  }
+                  className="w-full accent-sky-600 cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-400">
+                  <span>Nhỏ</span>
+                  <span>Vừa</span>
+                  <span>Tối đa (100%)</span>
+                </div>
               </div>
+            </div>
+
+            {/* Auto Read Chatbot Checkbox */}
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="checkbox"
+                id="autoReadBot"
+                checked={speechSettings.autoReadChatbot}
+                onChange={(e) =>
+                  setSpeechSettings({ ...speechSettings, autoReadChatbot: e.target.checked })
+                }
+                className="rounded text-sky-600 focus:ring-sky-500 w-4 h-4 cursor-pointer"
+              />
+              <label htmlFor="autoReadBot" className="text-xs text-slate-700 cursor-pointer">
+                Tự động đọc to phản hồi của Robot "Bạn AI Hạnh Phúc" khi có tin nhắn mới
+              </label>
+            </div>
+
+            {/* Test Voice & Stop Buttons */}
+            <div className="pt-2 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleTestSpeech}
+                className="px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-amber-950 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2"
+              >
+                <Volume2 className="w-4 h-4" /> THỬ GIỌNG TIẾNG VIỆT
+              </button>
+
+              <button
+                type="button"
+                onClick={() => speechService.stop()}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition-all"
+              >
+                DỪNG ĐỌC
+              </button>
             </div>
           </div>
 

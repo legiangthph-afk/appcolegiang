@@ -39,6 +39,55 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
+// High-fidelity Vietnamese Text-To-Speech (TTS) Proxy Endpoint
+const handleVietnameseTTS = async (text: string, res: Response) => {
+  if (!text || !text.trim()) {
+    return res.status(400).json({ error: 'Nội dung âm thanh trống.' });
+  }
+
+  // Google Translate TTS chunk limit ~200 characters
+  const cleanChunk = text.trim().slice(0, 200);
+  const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(cleanChunk)}&tl=vi&client=tw-ob`;
+
+  try {
+    const response = await fetch(ttsUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`TTS provider returned HTTP ${response.status}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    res.set({
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': buffer.length.toString(),
+      'Cache-Control': 'public, max-age=86400',
+      'Accept-Ranges': 'bytes',
+    });
+
+    return res.send(buffer);
+  } catch (err: any) {
+    console.error('TTS Proxy Error:', err);
+    return res.status(502).json({ error: 'Không thể tổng hợp giọng đọc tiếng Việt qua máy chủ.' });
+  }
+};
+
+app.get('/api/tts', async (req: Request, res: Response) => {
+  const text = (req.query.text as string) || '';
+  return handleVietnameseTTS(text, res);
+});
+
+app.post('/api/tts', async (req: Request, res: Response) => {
+  const { text } = req.body || {};
+  return handleVietnameseTTS(text, res);
+});
+
 // Generic AI generation endpoint using gemini-3.8-flash
 app.post('/api/ai/generate', async (req: Request, res: Response) => {
   try {

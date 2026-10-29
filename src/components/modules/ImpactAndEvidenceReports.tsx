@@ -168,7 +168,7 @@ export const ImpactAndEvidenceReports: React.FC = () => {
             </div>
             <div>
               <h3 className="font-bold text-slate-800 text-sm">3. Đối Với Nhà Trường & Địa Phương</h3>
-              <p className="text-[11px] text-slate-400">Mô hình điểm tại Khoái Châu, Hưng Yên</p>
+              <p className="text-[11px] text-slate-400">Mô hình điểm tại Xã Khoái Châu, Tỉnh Hưng Yên</p>
             </div>
           </div>
 

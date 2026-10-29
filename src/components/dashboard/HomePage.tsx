@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   CheckCircle,
@@ -51,17 +51,38 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onOpenSettings }
     return 'Chào buổi tối! Chúc gia đình các em có thời gian đầm ấm bên nhau!';
   };
 
-  const handleSpeakGreeting = () => {
-    speechService.speak(
-      `${getGreetingText()} Chào mừng đến với ứng dụng AI Đồng Hành – Kiến Tạo Lớp 4 Hạnh Phúc, Trường Tiểu học Khoái Châu 1.`
-    );
+  const WELCOME_SPEECH_TEXT = `Xin chào cô giáo Lê Thị Giang và các em học sinh thân yêu của lớp bốn A bốn!
+Chào mừng đến với ứng dụng AI Đồng Hành – Kiến Tạo Lớp Bốn Hạnh Phúc!
+Cô và các em hãy cùng khám phá những hoạt động học tập thú vị, chia sẻ yêu thương và cùng nhau tiến bộ mỗi ngày nhé!
+Chúc cô và các em có một ngày học tập thật vui vẻ và hạnh phúc!`;
+
+  const [isSpeakingWelcome, setIsSpeakingWelcome] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = speechService.subscribe((state) => {
+      setIsSpeakingWelcome(state.isSpeaking && state.currentText.includes('kiến tạo lớp bốn hạnh phúc'));
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleToggleSpeakGreeting = () => {
+    if (isSpeakingWelcome) {
+      speechService.stop();
+      setIsSpeakingWelcome(false);
+    } else {
+      speechService.speak(WELCOME_SPEECH_TEXT, {
+        onStart: () => setIsSpeakingWelcome(true),
+        onEnd: () => setIsSpeakingWelcome(false),
+        onError: () => setIsSpeakingWelcome(false),
+      });
+    }
   };
 
   const featureCards = [
     {
       key: 'module1',
       title: 'Phân hệ 1: Thông Tin & Quản Lý Lớp',
-      desc: 'Sĩ số 32 HS, điểm danh thông minh, phân tổ, nhập xuất Excel',
+      desc: `Sĩ số ${students.length} HS, điểm danh thông minh, phân tổ, nhập xuất Excel`,
       icon: '👥',
       color: 'from-sky-500 to-sky-600',
       badge: `${students.length} Học sinh`,
@@ -174,11 +195,15 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigate, onOpenSettings }
 
             <div className="pt-2 flex flex-wrap items-center justify-center lg:justify-start gap-3">
               <button
-                onClick={handleSpeakGreeting}
-                className="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-amber-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-2"
+                onClick={handleToggleSpeakGreeting}
+                className={`px-4 py-2.5 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 ${
+                  isSpeakingWelcome
+                    ? 'bg-rose-500 hover:bg-rose-600 text-white animate-pulse ring-2 ring-white/50'
+                    : 'bg-amber-400 hover:bg-amber-300 text-amber-950'
+                }`}
               >
-                <Volume2 className="w-4 h-4" />
-                Chào mừng bằng Tiếng Việt
+                <Volume2 className={`w-4 h-4 ${isSpeakingWelcome ? 'animate-bounce text-white' : 'text-amber-950'}`} />
+                {isSpeakingWelcome ? 'Đang phát lời chào (Bấm để dừng)' : 'Chào mừng bằng Tiếng Việt'}
               </button>
 
               <button

@@ -182,7 +182,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
                   >
                     <Smile className="w-4 h-4 text-amber-500" />
                     <div className="flex-1">
-                      <div>Học sinh (Em Nguyễn Hải Đăng)</div>
+                      <div>Học sinh (Em {students[0]?.fullName || 'Nguyễn Bình An'})</div>
                       <div className="text-[10px] text-slate-400">Tham gia hoạt động, làm bài, trò chơi</div>
                     </div>
                     {currentSession.role === 'student' && <Check className="w-3.5 h-3.5 text-sky-600" />}
@@ -199,7 +199,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings }) => {
                   >
                     <Heart className="w-4 h-4 text-rose-500" />
                     <div className="flex-1">
-                      <div>Phụ huynh (Bố em Hải Đăng)</div>
+                      <div>Phụ huynh (Gia đình em {students[0]?.fullName || 'Nguyễn Bình An'})</div>
                       <div className="text-[10px] text-slate-400">Theo dõi tiến bộ riêng của con</div>
                     </div>
                     {currentSession.role === 'parent' && <Check className="w-3.5 h-3.5 text-sky-600" />}

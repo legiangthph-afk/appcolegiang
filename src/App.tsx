@@ -145,7 +145,7 @@ function MainLayout() {
             🌸 AI ĐỒNG HÀNH – KIẾN TẠO LỚP 4 HẠNH PHÚC
           </p>
           <p>
-            Giáo viên chủ nhiệm: <strong>Lê Thị Giang</strong> • Trường Tiểu học Khoái Châu 1 • Huyện Khoái Châu, Hưng Yên
+            Giáo viên chủ nhiệm: <strong>Lê Thị Giang</strong> • Trường Tiểu học Khoái Châu 1 • Xã Khoái Châu, Tỉnh Hưng Yên
           </p>
           <p className="text-[11px] text-slate-400">
             "Công nghệ kết nối – Thấu hiểu yêu thương – Kiến tạo lớp 4 hạnh phúc"

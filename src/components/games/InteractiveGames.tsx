@@ -71,6 +71,7 @@ export const InteractiveGames: React.FC = () => {
   const [activeGame, setActiveGame] = useState<GameType>('millionaire');
   const [score, setScore] = useState(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [gameVolume, setGameVolume] = useState(() => speechService.getSettings().volume ?? 1.0);
 
   // 1. Millionaire State
   const [milIndex, setMilIndex] = useState(0);
@@ -121,19 +122,28 @@ export const InteractiveGames: React.FC = () => {
   const [obsStep, setObsStep] = useState(1);
   const [obsAnswer, setObsAnswer] = useState<number | null>(null);
 
+  // Play game welcome greeting when starting or switching games
+  useEffect(() => {
+    if (soundEnabled) {
+      speechService.speak('Chào mừng bạn đến với trò chơi học tập! Bạn đã sẵn sàng chưa nào?');
+    }
+  }, [activeGame]);
+
   const handleReadText = (text: string) => {
     if (!soundEnabled) return;
     speechService.speak(text);
   };
 
-  const triggerReward = (stars = 2, cheerText = 'Chúc mừng em đã hoàn thành xuất sắc!') => {
+  const triggerReward = (stars = 2, cheerText = 'Chính xác! Bạn thật tuyệt vời!') => {
     confetti({
       particleCount: 70,
       spread: 60,
       origin: { y: 0.6 },
     });
     speechService.playSuccessSound();
-    speechService.speak(cheerText);
+    if (soundEnabled) {
+      speechService.speak(cheerText);
+    }
     setScore((prev) => prev + stars * 10);
     if (currentSession.studentId) {
       awardStar(currentSession.studentId, stars);
@@ -148,7 +158,7 @@ export const InteractiveGames: React.FC = () => {
 
     const isCorrect = idx === DEFAULT_QUESTIONS[milIndex].correct;
     if (isCorrect) {
-      triggerReward(3, 'Chính xác! Em giỏi lắm!');
+      triggerReward(3, 'Chính xác! Bạn thật tuyệt vời!');
       setTimeout(() => {
         if (milIndex + 1 < DEFAULT_QUESTIONS.length) {
           setMilIndex((prev) => prev + 1);
@@ -156,12 +166,29 @@ export const InteractiveGames: React.FC = () => {
           setMilAnswered(false);
         } else {
           setMilGameOver(true);
-          triggerReward(10, 'Tuyệt vời! Em đã chinh phục đỉnh cao Ai là triệu phú nhí!');
+          triggerReward(10, 'Chúc mừng bạn đã hoàn thành trò chơi! Hãy tiếp tục cố gắng nhé!');
         }
       }, 1500);
     } else {
-      speechService.speak('Chưa đúng rồi, cố gắng ở câu tiếp theo nhé!');
+      if (soundEnabled) {
+        speechService.speak('Chưa chính xác rồi! Bạn hãy thử lại nhé!');
+      }
     }
+  };
+
+  // Question and options speech reading
+  const handleReadMilQuestion = () => {
+    if (!soundEnabled) return;
+    const q = DEFAULT_QUESTIONS[milIndex];
+    speechService.speak(`Câu hỏi số ${milIndex + 1}: ${q.q}`);
+  };
+
+  const handleReadMilOptions = () => {
+    if (!soundEnabled) return;
+    const q = DEFAULT_QUESTIONS[milIndex];
+    const letters = ['A', 'B', 'C', 'D'];
+    const text = q.options.map((opt, i) => `Đáp án ${letters[i]}: ${opt}`).join('. ');
+    speechService.speak(text);
   };
 
   // Spin Lucky Wheel
@@ -179,7 +206,7 @@ export const InteractiveGames: React.FC = () => {
       const index = Math.floor((360 - normalizedAngle) / (360 / wheelRewards.length)) % wheelRewards.length;
       const reward = wheelRewards[index];
       setWheelResult(reward);
-      triggerReward(5, `Chúc mừng! Em nhận được: ${reward}`);
+      triggerReward(5, `Chúc mừng bạn! Bạn nhận được phần thưởng: ${reward}`);
     }, 3200);
   };
 
@@ -189,9 +216,16 @@ export const InteractiveGames: React.FC = () => {
     if (selectedLeft === pairId) {
       setMatchedIds((prev) => [...prev, pairId]);
       setSelectedLeft(null);
-      triggerReward(2, 'Ghép đôi chính xác!');
+      triggerReward(2, 'Chính xác! Bạn thật tuyệt vời!');
+      if (matchedIds.length + 1 === matchingPairs.length) {
+        setTimeout(() => {
+          triggerReward(5, 'Chúc mừng bạn đã hoàn thành trò chơi! Hãy tiếp tục cố gắng nhé!');
+        }, 1200);
+      }
     } else {
-      speechService.speak('Chưa đúng cặp rồi, em hãy thử lại nhé!');
+      if (soundEnabled) {
+        speechService.speak('Chưa chính xác rồi! Bạn hãy thử lại nhé!');
+      }
       setSelectedLeft(null);
     }
   };
@@ -218,18 +252,39 @@ export const InteractiveGames: React.FC = () => {
               <span className="text-xl font-bold text-amber-300">{score}</span>
             </div>
 
+            {/* Volume Control */}
+            <div className="hidden sm:flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-2 rounded-xl border border-white/20 text-xs">
+              <span className="text-[11px] font-semibold">Âm lượng:</span>
+              <input
+                type="range"
+                min="0.1"
+                max="1.0"
+                step="0.05"
+                value={gameVolume}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setGameVolume(val);
+                  speechService.saveSettings({ volume: val });
+                }}
+                className="w-16 accent-amber-300 cursor-pointer"
+                title={`Âm lượng: ${Math.round(gameVolume * 100)}%`}
+              />
+              <span className="font-bold text-amber-200">{Math.round(gameVolume * 100)}%</span>
+            </div>
+
             <button
               onClick={() => {
                 const nextState = !soundEnabled;
                 setSoundEnabled(nextState);
                 speechService.saveSettings({ enabled: nextState });
+                if (!nextState) speechService.stop();
               }}
               className={`p-2.5 rounded-xl border transition-all ${
                 soundEnabled
                   ? 'bg-amber-400 text-amber-950 border-amber-300 shadow-sm'
                   : 'bg-white/10 text-white/70 border-white/20'
               }`}
-              title={soundEnabled ? 'Tắt âm thanh' : 'Bật âm thanh'}
+              title={soundEnabled ? 'Tắt âm thanh trò chơi' : 'Bật âm thanh trò chơi'}
             >
               {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
             </button>
@@ -272,17 +327,31 @@ export const InteractiveGames: React.FC = () => {
           <div className="max-w-2xl mx-auto space-y-6">
             {!milGameOver ? (
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="px-3 py-1 bg-sky-100 text-sky-700 font-bold text-xs rounded-full">
                       CÂU HỎI {milIndex + 1} / {DEFAULT_QUESTIONS.length}
                     </span>
                     <button
-                      onClick={() => handleReadText(DEFAULT_QUESTIONS[milIndex].q)}
-                      className="p-1.5 text-sky-600 hover:bg-sky-50 rounded-lg"
+                      onClick={handleReadMilQuestion}
+                      className="px-2.5 py-1 text-xs bg-sky-50 text-sky-700 font-bold hover:bg-sky-100 rounded-lg border border-sky-200 flex items-center gap-1.5 transition-all"
                       title="Đọc câu hỏi bằng tiếng Việt"
                     >
-                      <Volume2 className="w-5 h-5" />
+                      <Volume2 className="w-3.5 h-3.5" /> Đọc câu hỏi
+                    </button>
+                    <button
+                      onClick={handleReadMilOptions}
+                      className="px-2.5 py-1 text-xs bg-amber-50 text-amber-800 font-bold hover:bg-amber-100 rounded-lg border border-amber-200 flex items-center gap-1.5 transition-all"
+                      title="Đọc các lựa chọn trả lời A, B, C, D"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5" /> Đọc các đáp án
+                    </button>
+                    <button
+                      onClick={handleReadMilQuestion}
+                      className="px-2.5 py-1 text-xs bg-slate-50 text-slate-700 font-semibold hover:bg-slate-100 rounded-lg border border-slate-200 flex items-center gap-1 transition-all"
+                      title="Nghe lại"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> Nghe lại
                     </button>
                   </div>
                   <span className="text-amber-500 font-bold text-sm flex items-center gap-1">
@@ -520,9 +589,11 @@ export const InteractiveGames: React.FC = () => {
                     const clean = crosswordAnswer.trim().toLowerCase().replace(/\s+/g, '');
                     if (clean === 'hanhphuc' || clean === 'hạnhphúc') {
                       setCrosswordSuccess(true);
-                      triggerReward(5, 'Chính xác! Từ khóa kỳ diệu chính là HẠNH PHÚC!');
+                      triggerReward(5, 'Chính xác! Bạn thật tuyệt vời!');
                     } else {
-                      speechService.speak('Chưa đúng rồi! Gợi ý: Bắt đầu bằng chữ H và là mục tiêu của lớp 4A4 chúng mình.');
+                      if (soundEnabled) {
+                        speechService.speak('Chưa chính xác rồi! Bạn hãy thử lại nhé!');
+                      }
                     }
                   }}
                   className="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl shadow-md transition-all"
@@ -565,10 +636,12 @@ export const InteractiveGames: React.FC = () => {
                   onClick={() => {
                     const correct = tfQuestions[tfIndex].answer === true;
                     if (correct) {
-                      triggerReward(2, 'Đúng rồi!');
+                      triggerReward(2, 'Chính xác! Bạn thật tuyệt vời!');
                       setTfFeedback(tfQuestions[tfIndex].note);
                     } else {
-                      speechService.speak('Chưa đúng rồi!');
+                      if (soundEnabled) {
+                        speechService.speak('Chưa chính xác rồi! Bạn hãy thử lại nhé!');
+                      }
                       setTfFeedback(tfQuestions[tfIndex].note);
                     }
                   }}
@@ -581,10 +654,12 @@ export const InteractiveGames: React.FC = () => {
                   onClick={() => {
                     const correct = tfQuestions[tfIndex].answer === false;
                     if (correct) {
-                      triggerReward(2, 'Chính xác!');
+                      triggerReward(2, 'Chính xác! Bạn thật tuyệt vời!');
                       setTfFeedback(tfQuestions[tfIndex].note);
                     } else {
-                      speechService.speak('Chưa đúng rồi!');
+                      if (soundEnabled) {
+                        speechService.speak('Chưa chính xác rồi! Bạn hãy thử lại nhé!');
+                      }
                       setTfFeedback(tfQuestions[tfIndex].note);
                     }
                   }}
@@ -658,10 +733,12 @@ export const InteractiveGames: React.FC = () => {
                       key={idx}
                       onClick={() => {
                         if (o.val === 2) {
-                          triggerReward(3, 'Đã vượt chướng ngại vật 1!');
+                          triggerReward(3, 'Chính xác! Bạn thật tuyệt vời!');
                           setObsStep(2);
                         } else {
-                          speechService.speak('Nhớ tính nhân chia trước, cộng trừ sau nhé!');
+                          if (soundEnabled) {
+                            speechService.speak('Chưa chính xác rồi! Bạn hãy thử lại nhé!');
+                          }
                         }
                       }}
                       className="w-full p-3 bg-white hover:bg-sky-50 border border-slate-200 rounded-xl font-medium text-left text-sm"
@@ -679,10 +756,12 @@ export const InteractiveGames: React.FC = () => {
                       key={idx}
                       onClick={() => {
                         if (o.val === 2) {
-                          triggerReward(3, 'Đã vượt chướng ngại vật 2!');
+                          triggerReward(3, 'Chính xác! Bạn thật tuyệt vời!');
                           setObsStep(3);
                         } else {
-                          speechService.speak('Chưa đúng rồi, phải là s nhẹ!');
+                          if (soundEnabled) {
+                            speechService.speak('Chưa chính xác rồi! Bạn hãy thử lại nhé!');
+                          }
                         }
                       }}
                       className="w-full p-3 bg-white hover:bg-sky-50 border border-slate-200 rounded-xl font-medium text-left text-sm"
@@ -700,8 +779,12 @@ export const InteractiveGames: React.FC = () => {
                       key={idx}
                       onClick={() => {
                         if (o.val === 1) {
-                          triggerReward(10, 'Hoan hô! Em đã chinh phục đỉnh núi tri thức lớp 4A4!');
+                          triggerReward(10, 'Chúc mừng bạn đã hoàn thành trò chơi! Hãy tiếp tục cố gắng nhé!');
                           setObsStep(1);
+                        } else {
+                          if (soundEnabled) {
+                            speechService.speak('Chưa chính xác rồi! Bạn hãy thử lại nhé!');
+                          }
                         }
                       }}
                       className="w-full p-3 bg-white hover:bg-sky-50 border border-slate-200 rounded-xl font-medium text-left text-sm"
